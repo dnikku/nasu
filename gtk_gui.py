@@ -6,21 +6,22 @@ class PyApp(object):
     def __init__(self, master):
         self.master = master
         master.set_title("nasu ~")
-        master.set_size_request(400, 300)
         master.set_position(gtk.WIN_POS_CENTER)
         master.connect("destroy", gtk.main_quit)
 
         self.playlist_filter_label = gtk.Label('Search')
         self.playlist_filter = gtk.Entry()
         self.playlist_count = gtk.Label('<count>')
+        self.playlist_count.set_size_request(30, 10)
 
         self.playlist = gtk.TreeView()
+        self.playlist.set_size_request(100, 300)
         column = gtk.TreeViewColumn("Name", gtk.CellRendererText(), text=0)
         column.set_sort_column_id(0)
         self.playlist.append_column(column)
 
         self.player = gtk.DrawingArea()
-        self.player.set_size_request(200, 150)
+        self.player.set_size_request(400, 300)
         self.player.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse("black"))
 
@@ -28,29 +29,36 @@ class PyApp(object):
         self.pos.set_range(0, 100)
         self.pos.set_increments(1, 10)
         self.pos.set_digits(0)
-        self.pos.set_size_request(200, 25)
+
         #scale.connect("value-changed", self.on_changed)
 
         self.volume = gtk.VScale()
         self.volume.set_range(0, 10)
         self.volume.set_digits(0)
-        #self.volume.set_size_request(200, 25)
         #scale.connect("value-changed", self.on_changed)
 
+        filter_box = gtk.HBox(False, 5)
+        filter_box.pack_start(self.playlist_filter_label, False)
+        filter_box.pack_start(self.playlist_filter, True, True)
+        filter_box.pack_start(self.playlist_count, False)
 
-        table = gtk.Table(3, 5, False)
-        table.attach(self.playlist_filter_label, 2, 3, 0, 1,
-                     xpadding=5)
-        table.attach(self.playlist_filter, 3, 4, 0, 1)
-        table.attach(self.playlist_count, 4, 5, 0, 1,
-                     xpadding=5)
-        table.attach(self.playlist, 2, 5, 1, 2, xpadding=5, ypadding=5)
+        playlist_box = gtk.VBox(False, 5)
+        playlist_box.pack_start(filter_box, False)
+        playlist_box.pack_start(self.playlist, True, True)
 
-        table.attach(self.player, 0, 2, 0, 2)
-        table.attach(self.pos, 0, 1, 2, 3)
-        table.attach(self.volume, 1, 2, 2, 3)
+        player_control_box = gtk.HBox(False, 5)
+        player_control_box.pack_start(self.pos, True, True)
+        player_control_box.pack_start(self.volume, False)
 
-        self.master.add(table)
+        player_box = gtk.VBox(False, 5)
+        player_box.pack_start(self.player, True, True)
+        player_box.pack_start(player_control_box, False)
+
+        main_box = gtk.HBox(False, 5)
+        main_box.pack_start(player_box, True, True)
+        main_box.pack_start(playlist_box, False)
+
+        self.master.add(main_box)
         self.master.show_all()
 
     def set_playlist(self, files):
