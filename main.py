@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import tk_gui
+import gtk_gui
 
 
 def dir_files(start_from):
@@ -18,4 +18,4 @@ def dir_files(start_from):
 
 if __name__ == '__main__':
     #play()
-    tk_gui.main(dir_files('..'))
+    gtk_gui.main(dir_files('..'))
