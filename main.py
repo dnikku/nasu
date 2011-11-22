@@ -1,27 +1,21 @@
 #!/usr/bin/env python
 
-import time
-
-def vmtk():
-    from Tkinter import Tk
-    w = Tk()
-    w.mainloop()
+import tk_gui
 
 
-def play():
-    """ Sample files:
-    path = 'file:///e:/downloads/lola_rennt.avi'
-    #path = 'e:\downloads\lola_rennt.avi'
-    """
+def dir_files(start_from):
+    from os import walk, path
+    for root, dirs, files in walk(start_from):
 
-    import vlc
-
-    some_video = 'e:\downloads\lola_rennt.avi'
-    p = vlc.MediaPlayer(some_video)
-    p.play()
-    time.sleep(10)
+        if '.git' in root or 've' in root:
+            pass
+        else:
+            for name in files:
+                yield {'name': name,
+                       'path': path.join(root, name)
+                       }
 
 
 if __name__ == '__main__':
     #play()
-    vmtk()
+    tk_gui.main(dir_files('..'))

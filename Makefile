@@ -1,4 +1,6 @@
 
+all: run-local
+
 clean-pyc:
 	find . -name '*.pyc' | xargs rm -f
 
@@ -10,4 +12,4 @@ deploy-win7: clean-pyc
 
 
 run-local:
-	python main.py
+	./main.py
