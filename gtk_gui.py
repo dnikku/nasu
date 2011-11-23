@@ -73,6 +73,7 @@ class PyApp(object):
         self.master.add(main_box)
         self.master.show_all()
 
+
     def set_title(self, text):
         self.master.set_title("nasu ~" + text)
 

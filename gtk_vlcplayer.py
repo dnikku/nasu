@@ -2,21 +2,72 @@ import gtk
 gtk.gdk.threads_init()
 
 import sys
-from gettext import gettext as _
+import gobject
 
-
-class WindowsVLCWidget(gtk.DrawingArea):
+class Windowed(gtk.DrawingArea):
     def __init__(self):
-        gtk.DrawingArea.__init__(self)
+        super(Windowed, self).__init__()
+
+        self.w = gtk.Window(gtk.WINDOW_POPUP)
+        self.w.set_decorated(False)
+        self.w.show()
+
+    def do_size_allocate(self, allocation):
+        super(Windowed, self).do_size_allocate(self, allocation)
+        self.w.resize(allocation.width, allocation.height)
+
+    def do_position_on_screen(self, *args, **kwargs):
+        if self.flags() & gtk.REALIZED:
+            x,y = self.get_toplevel().window.get_position()
+            self.w.window.move(x, y)
+
+gobject.type_register(Windowed)
+
+
+class WindowsVLCWidget(Windowed):
+    def __init__(self):
+        super(WindowsVLCWidget, self).__init__()
+
         self._player = self.vlc_instance.media_player_new()
+
         def handle_embed(*args):
-            self.player.set_hwnd(self.window.handle)
+            print 'overlay:', self.window.handle
+            self.w.set_transient_for(self.get_toplevel())
+            self.get_toplevel().connect('configure-event',
+                                        self.do_position_on_screen)
+
+            self._player.set_hwnd(self.w.window.handle)
             return True
         self.connect("map", handle_embed)
         self.set_size_request(320, 200)
 
     def play(self, file_path):
-        pass
+        self._player.set_media(self.vlc_instance.media_new(file_path))
+        self._player.play()
+
+
+class _WindowsVLCWidget(gtk.DrawingArea):
+    def __init__(self):
+        super(WindowsVLCWidget, self).__init__()
+
+        self._player = self.vlc_instance.media_player_new()
+        def handle_embed(*args):
+            print 'overlay:', self.window.handle
+            self._w = w = gtk.Window(gtk.WINDOW_POPUP)
+            w.set_transient_for(self.get_toplevel())
+            w.set_decorated(False)
+            w.show()
+            self._player.set_hwnd(w.window.handle)
+
+            return True
+        self.connect("map", handle_embed)
+
+
+        self.set_size_request(320, 200)
+
+    def play(self, file_path):
+        self._player.set_media(self.vlc_instance.media_new(file_path))
+        self._player.play()
 
 
 class FakeWidget(gtk.Label):
