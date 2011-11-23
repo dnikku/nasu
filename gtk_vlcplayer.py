@@ -13,13 +13,14 @@ class Windowed(gtk.DrawingArea):
         self.w.show()
 
     def do_size_allocate(self, allocation):
-        super(Windowed, self).do_size_allocate(self, allocation)
+        print 'do_size:', allocation
         self.w.resize(allocation.width, allocation.height)
+        #super(Windowed, self).do_size_allocate(self, allocation)
 
     def do_position_on_screen(self, *args, **kwargs):
-        if self.flags() & gtk.REALIZED:
-            x,y = self.get_toplevel().window.get_position()
-            self.w.window.move(x, y)
+        x,y = self.get_toplevel().window.get_position()
+        print 'do_pos', [x, y]
+        self.w.window.move(x, y)
 
 gobject.type_register(Windowed)
 
