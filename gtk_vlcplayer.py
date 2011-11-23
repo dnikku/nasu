@@ -12,15 +12,23 @@ class Windowed(gtk.DrawingArea):
         self.w.set_decorated(False)
         self.w.show()
 
+        def handle_move(*args, **kwargs):
+            x,y = self.get_toplevel().window.get_position()
+            print 'do_pos', [x, y]
+            self.w.window.move(x, y)
+        def handle_embed(*args, **kwargs):
+            self.w.set_transient_for(self.get_toplevel())
+            self.get_toplevel().connect('configure-event',
+                                        handle_move)
+            return True
+        self.connect("map", handle_embed)
+
     def do_size_allocate(self, allocation):
         print 'do_size:', allocation
         self.w.resize(allocation.width, allocation.height)
+        #if self.flags() & gtk.REALIZED:
         #super(Windowed, self).do_size_allocate(self, allocation)
 
-    def do_position_on_screen(self, *args, **kwargs):
-        x,y = self.get_toplevel().window.get_position()
-        print 'do_pos', [x, y]
-        self.w.window.move(x, y)
 
 gobject.type_register(Windowed)
 
@@ -30,16 +38,8 @@ class WindowsVLCWidget(Windowed):
         super(WindowsVLCWidget, self).__init__()
 
         self._player = self.vlc_instance.media_player_new()
+        self._player.set_hwnd(self.w.window.handle)
 
-        def handle_embed(*args):
-            print 'overlay:', self.window.handle
-            self.w.set_transient_for(self.get_toplevel())
-            self.get_toplevel().connect('configure-event',
-                                        self.do_position_on_screen)
-
-            self._player.set_hwnd(self.w.window.handle)
-            return True
-        self.connect("map", handle_embed)
         self.set_size_request(320, 200)
 
     def play(self, file_path):
