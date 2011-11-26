@@ -9,6 +9,12 @@ def get_root_path():
         root_path = '..';
     return root_path
 
+ignore_files = [
+    '.txt',
+    '.srt',
+    '.nfo',
+    '.url'
+    ]
 
 def dir_files(start_from=get_root_path()):
 
@@ -22,6 +28,8 @@ def dir_files(start_from=get_root_path()):
                    }
         else:
             for name in files:
+                if any(filter(lambda x: name.endswith(x), ignore_files)):
+                    continue
                 file_path = path.abspath(path.join(root, name))
                 yield {'name': name,
                        'path': file_path,
