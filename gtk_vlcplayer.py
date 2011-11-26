@@ -4,6 +4,7 @@ gtk.gdk.threads_init()
 import sys
 import gobject
 
+
 class Windowed(gtk.DrawingArea):
     def __init__(self):
         super(Windowed, self).__init__()
@@ -14,7 +15,7 @@ class Windowed(gtk.DrawingArea):
 
         def handle_move(*args, **kwargs):
             x,y = self.get_toplevel().window.get_position()
-            print 'do_pos', [x, y]
+            #print 'do_pos', [x, y]
             self.w.window.move(x, y)
         def handle_embed(*args, **kwargs):
             self.w.set_transient_for(self.get_toplevel())
@@ -24,16 +25,18 @@ class Windowed(gtk.DrawingArea):
         self.connect("map", handle_embed)
 
     def do_size_allocate(self, allocation):
-        print 'do_size:', allocation
+        #print 'do_size:', allocation
         self.w.resize(allocation.width, allocation.height)
         #if self.flags() & gtk.REALIZED:
         #super(Windowed, self).do_size_allocate(self, allocation)
 
 
-gobject.type_register(Windowed)
-
-
 class WindowsVLCWidget(Windowed):
+    __gsignals__ = {
+        'play-started': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-stopped': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        }
+
     def __init__(self):
         super(WindowsVLCWidget, self).__init__()
 
@@ -41,43 +44,43 @@ class WindowsVLCWidget(Windowed):
         self._player.set_hwnd(self.w.window.handle)
 
         self.set_size_request(320, 200)
+        gobject.timeout_add(1000, self._play_status)
 
     def play(self, file_path):
         self._player.set_media(self.vlc_instance.media_new(file_path))
         self._player.play()
 
+        self.emit('play-started')
 
-class _WindowsVLCWidget(gtk.DrawingArea):
-    def __init__(self):
-        super(WindowsVLCWidget, self).__init__()
+    def get_length(self):
+        """ total play duration, in seconds """
+        return int(self._player.get_length()/1000)
 
-        self._player = self.vlc_instance.media_player_new()
-        def handle_embed(*args):
-            print 'overlay:', self.window.handle
-            self._w = w = gtk.Window(gtk.WINDOW_POPUP)
-            w.set_transient_for(self.get_toplevel())
-            w.set_decorated(False)
-            w.show()
-            self._player.set_hwnd(w.window.handle)
+    def get_time(self):
+        """ current play pos in seconds """
+        return int(self._player.get_time()/1000)
 
-            return True
-        self.connect("map", handle_embed)
+    def _play_status(self, *args):
+        print 'play_status: ', self.get_length(), self.get_time()
 
+        return True # enble repetation
 
-        self.set_size_request(320, 200)
-
-    def play(self, file_path):
-        self._player.set_media(self.vlc_instance.media_new(file_path))
-        self._player.play()
 
 
 class FakeWidget(gtk.Label):
+    __gsignals__ = {
+        'play-started': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-stopped': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        }
+
     def __init__(self):
         gtk.Label.__init__(self)
         self.set_size_request(320, 200)
 
     def play(self, file_path):
         self.set_text(file_path)
+
+
 
 if sys.platform == 'win32':
     VLCWidget = WindowsVLCWidget
@@ -86,3 +89,5 @@ if sys.platform == 'win32':
     WindowsVLCWidget.vlc_instance = vlc.Instance()
 else:
     VLCWidget = FakeWidget
+
+gobject.type_register(VLCWidget)
