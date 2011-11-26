@@ -89,7 +89,7 @@ class MainForm(object):
 
         player_box = gtk.VBox(False, 5)
         player_box.pack_start(self.player, True, True)
-        player_box.pack_start(player_control_box, False)
+        #player_box.pack_start(player_control_box, False)
 
         main_box = gtk.HBox(False, 5)
         main_box.pack_start(player_box, True, True)
@@ -179,10 +179,16 @@ class Playlist(gtk.VBox):
         searchlist_filter_label = gtk.Label('Search')
         searchlist_filter = gtk.Entry()
         searchlist.searchlist_filter = searchlist_filter
-        def refilter_medias(*args):
-            searchlist.get_model().refilter()
-            searchlist_count.set_text(str(len(searchlist.get_model())))
-        searchlist_filter.connect('key-release-event', refilter_medias)
+        def searchlist_filter_keydown(entry, key_event):
+            print 'keyeey:', key_event, key_event.keyval
+            if key_event.keyval == 65307: # escape
+                self.enter_list_mode()
+            elif key_event.keyval == 65293: # enter
+                pass
+            else:
+                searchlist.get_model().refilter()
+                searchlist_count.set_text(str(len(searchlist.get_model())))
+        searchlist_filter.connect('key-release-event', searchlist_filter_keydown)
 
         searchlist_count = gtk.Label('<count>')
         searchlist_count.set_size_request(30, 10)
