@@ -35,10 +35,10 @@ class MainForm(object):
         menubar.append(media_menuitem)
         media_menu = gtk.Menu()
         media_menuitem.set_submenu(media_menu)
-        media_menu.append(self.create_menu_item('Add to list', 'a', self.do_somth))
-        media_menu.append(self.create_menu_item('Remove from list', 'r', self.do_somth))
-        media_menu.append(self.create_menu_item('Load list from file', 's', self.do_somth))
-        media_menu.append(self.create_menu_item('Save list to file', 's', self.do_somth))
+        media_menu.append(self.create_menu_item('Add Folder', None, self.do_somth))
+        media_menu.append(self.create_menu_item('Remove Selected', '<Control>d', self.do_somth))
+        media_menu.append(self.create_menu_item('Load List ...', None, self.do_somth))
+        media_menu.append(self.create_menu_item('Save List As ...', '<Control>s', self.do_somth))
         media_menu.append(self.create_menu_item('Exit', '<Control>x', gtk.main_quit))
 
         playback_action = gtk.Action('Playback', 'Playback', None, None)
@@ -47,11 +47,10 @@ class MainForm(object):
         menubar.append(playback_menuitem)
         playback_menu = gtk.Menu()
         playback_menuitem.set_submenu(playback_menu)
-        playback_menu.append(self.create_menu_item('Play', 'p', self.do_somth))
-        playback_menu.append(self.create_menu_item('Pause', 'x', self.do_somth))
-        playback_menu.append(self.create_menu_item('Stop', 'a', self.do_somth))
-        playback_menu.append(self.create_menu_item('Previous', 'r', self.do_somth))
-        playback_menu.append(self.create_menu_item('Next', 's', self.do_somth))
+        playback_menu.append(self.create_menu_item('Play/Pause', 'p', self.do_somth))
+        playback_menu.append(self.create_menu_item('Stop', 's', self.do_somth))
+        playback_menu.append(self.create_menu_item('Prev', 'v', self.jump_prev_media))
+        playback_menu.append(self.create_menu_item('Next', 'n', self.jump_next_media))
         playback_menu.append(self.create_menu_item('Jump to media', 'j', self.jump_to_media))
 
         playback_menu.append(self.create_menu_item('Jump forward', 'f', self.do_somth))
@@ -59,12 +58,9 @@ class MainForm(object):
         playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
 
 
-        self.playlist_filter_label = gtk.Label('Search')
-        self.playlist_filter = gtk.Entry()
-        self.playlist_count = gtk.Label('<count>')
-        self.playlist_count.set_size_request(30, 10)
-
         self.playlist = gtk.TreeView()
+        self.playlist.set_reorderable(True)
+        self.playlist.set_enable_search(False)
         self.playlist.set_size_request(400, 300)
         column = gtk.TreeViewColumn("type", gtk.CellRendererText(), text=2)
         column.set_sort_column_id(0)
@@ -74,7 +70,7 @@ class MainForm(object):
         column = gtk.TreeViewColumn("name", cell_renderer, text=0, foreground=3)
         column.set_sort_column_id(1)
         self.playlist.append_column(column)
-        self.playlist.connect("row-activated", self.play_item)
+        self.playlist.connect("row-activated", self.play_media)
 
         self.player = VLCWidget() #gtk.DrawingArea()
         self.player.set_size_request(400, 300)
@@ -94,15 +90,6 @@ class MainForm(object):
         self.volume.set_digits(0)
         #scale.connect("value-changed", self.on_changed)
 
-        filter_box = gtk.HBox(False, 5)
-        filter_box.pack_start(self.playlist_filter_label, False)
-        filter_box.pack_start(self.playlist_filter, True, True)
-        filter_box.pack_start(self.playlist_count, False)
-
-        playlist_box = gtk.VBox(False, 5)
-        playlist_box.pack_start(filter_box, False)
-        playlist_box.pack_start(self.playlist, True, True)
-
         player_control_box = gtk.HBox(False, 5)
         player_control_box.pack_start(self.pos, True, True)
         player_control_box.pack_start(self.volume, False)
@@ -113,7 +100,7 @@ class MainForm(object):
 
         main_box = gtk.HBox(False, 5)
         main_box.pack_start(player_box, True, True)
-        main_box.pack_start(playlist_box, False)
+        main_box.pack_start(self.playlist, False)
 
         window_box = gtk.VBox(False, 5)
         window_box.pack_start(menubar, False, False)
@@ -134,7 +121,6 @@ class MainForm(object):
 
     def set_playlist(self, files):
         # see os.walk, os.listdir
-        files = list(files)
         store = gtk.ListStore(str, str, str, str)
         for f in files:
             store.append([f['name'],
@@ -143,9 +129,8 @@ class MainForm(object):
                           self.config['normal'],
                           ])
         self.playlist.set_model(store)
-        self.playlist_count.set_text(str(len(files)))
 
-    def play_item(self, grid, path, *args, **kwargs):
+    def play_media(self, grid, path, *args, **kwargs):
         model, it = self.playlist.get_selection().get_selected()
         file_name, file_path = model.get_value(it, 0), model.get_value(it, 1)
 
@@ -169,17 +154,40 @@ class MainForm(object):
         print 'jump_to_media: ', media
         self.select_media(media)
 
+    def jump_prev_media(self, *args):
+        model = self.playlist.get_model()
+        l = len(model)
+        if l:
+            _, it = self.playlist.get_selection().get_selected()
+            current = model.get_path(it)[0] if it else 1
+            current = (current - 1 + l)% l
+            self.select_media_by_path((current,))
+
+    def jump_next_media(self, *args):
+        model = self.playlist.get_model()
+        l = len(model)
+        if l:
+            _, it = self.playlist.get_selection().get_selected()
+            current = model.get_path(it)[0] if it else -1
+            print 'inainte curr:', current, current + 1 + l, l
+            current = (current + 1 + l)% l
+            print 'dupa curr:', current
+            self.select_media_by_path((current,))
+
     def select_media(self, media):
         model = self.playlist.get_model()
         for it in _model_iter(model):
             if media == model.get_value(it, 1):
                 tree_path = model.get_path(it)
-                self.playlist.get_selection().select_iter(it)
-                self.playlist.row_activated(tree_path, self.playlist.get_column(0))
-                self.playlist.scroll_to_cell(tree_path)
+                self.select_media_by_path(tree_path)
                 break
         else:
             print 'ERROR: invalid media to select', media
+
+    def select_media_by_path(self, tree_path):
+        self.playlist.set_cursor(tree_path)
+        self.playlist.row_activated(tree_path, self.playlist.get_column(0))
+        self.playlist.scroll_to_cell(tree_path)
 
 
 class PlayerForm(object):
@@ -197,12 +205,13 @@ class JumpForm(object):
 
         self.playlist_filter_label = gtk.Label('Search')
         self.playlist_filter = gtk.Entry()
-        self.playlist_filter.connect('preedit-changed', self.refilter_medias)
+        self.playlist_filter.connect('key-release-event', self.refilter_medias)
         self.playlist_count = gtk.Label('<count>')
         self.playlist_count.set_size_request(30, 10)
 
         self.playlist = gtk.TreeView()
         self.playlist.set_model(self.model_filter)
+        self.playlist.set_enable_search(False)
         self.playlist.set_size_request(400, 300)
         column = gtk.TreeViewColumn("type", gtk.CellRendererText(), text=2)
         column.set_sort_column_id(0)
@@ -237,8 +246,10 @@ class JumpForm(object):
         text = self.playlist_filter.get_text() or ''
         return text in file_name
 
-    def refilter_medias(self, entry, preedit, user_data):
+    def refilter_medias(self, *args):
+        print 'text:', self.playlist_filter.get_text() or ''
         self.model_filter.refilter()
+        self.playlist_count.set_text(str(len(self.model_filter)))
 
     def media_selected(self, *args):
         self.form.response(gtk.RESPONSE_OK)
