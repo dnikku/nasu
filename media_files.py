@@ -11,9 +11,10 @@ def get_root_path():
 
 ignore_files = [
     '.txt',
-    '.srt',
+    '.srt', '.sub'
     '.nfo',
-    '.url'
+    '.url',
+    '.idx',
     ]
 
 def dir_files(start_from=get_root_path()):

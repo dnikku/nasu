@@ -11,6 +11,8 @@ class Windowed(gtk.DrawingArea):
 
         self.w = gtk.Window(gtk.WINDOW_POPUP)
         self.w.set_decorated(False)
+        self.w.connect('window-state-event', self.update_state)
+
         self.w.show()
 
         def handle_move(*args, **kwargs):
@@ -29,6 +31,10 @@ class Windowed(gtk.DrawingArea):
         self.w.resize(allocation.width, allocation.height)
         #if self.flags() & gtk.REALIZED:
         #super(Windowed, self).do_size_allocate(self, allocation)
+
+    def update_state(self, w, event, *args):
+        print 'update_state:', event.new_window_state
+        self.is_fullscreen = (event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN)
 
 
 class WindowsVLCWidget(Windowed):
@@ -62,10 +68,13 @@ class WindowsVLCWidget(Windowed):
 
     def _play_status(self, *args):
         print 'play_status: ', self.get_length(), self.get_time()
-
         return True # enble repetation
 
-
+    def toggle_fullscreen(self, *args):
+        if getattr(self, 'is_fullscreen', None):
+            self.w.unfullscreen()
+        else:
+            self.w.fullscreen()
 
 class FakeWidget(gtk.Label):
     __gsignals__ = {

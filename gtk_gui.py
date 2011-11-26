@@ -85,7 +85,8 @@ class MainForm(object):
         playback_menu.append(self.create_menu_item('Jump forward', 'f', self.do_somth))
         playback_menu.append(self.create_menu_item('Jump backward', 'b', self.do_somth))
         playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
-
+        playback_menu.append(self.create_menu_item('Fullscreen', 'z',
+                                                   self.player.toggle_fullscreen))
 
         player_box = gtk.VBox(False, 5)
         player_box.pack_start(self.player, True, True)
