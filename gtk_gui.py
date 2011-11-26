@@ -3,6 +3,13 @@ import gtk
 from gtk_vlcplayer import VLCWidget
 
 
+def _model_iter(model):
+    it = model.get_iter_root()
+    while it:
+        yield it
+        it = model.iter_next(it)
+
+
 class MainForm(object):
     config = {
         'normal': 'black',
@@ -40,13 +47,16 @@ class MainForm(object):
         menubar.append(playback_menuitem)
         playback_menu = gtk.Menu()
         playback_menuitem.set_submenu(playback_menu)
+        playback_menu.append(self.create_menu_item('Play', 'p', self.do_somth))
+        playback_menu.append(self.create_menu_item('Pause', 'x', self.do_somth))
         playback_menu.append(self.create_menu_item('Stop', 'a', self.do_somth))
         playback_menu.append(self.create_menu_item('Previous', 'r', self.do_somth))
         playback_menu.append(self.create_menu_item('Next', 's', self.do_somth))
+        playback_menu.append(self.create_menu_item('Jump to media', 'j', self.jump_to_media))
 
-        playback_menu.append(self.create_menu_item('Jump forward', 'x', self.do_somth))
-        playback_menu.append(self.create_menu_item('Jump backward', 'a', self.do_somth))
-        playback_menu.append(self.create_menu_item('Jump to time', 'm', self.do_somth))
+        playback_menu.append(self.create_menu_item('Jump forward', 'f', self.do_somth))
+        playback_menu.append(self.create_menu_item('Jump backward', 'b', self.do_somth))
+        playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
 
 
         self.playlist_filter_label = gtk.Label('Search')
@@ -64,7 +74,6 @@ class MainForm(object):
         column = gtk.TreeViewColumn("name", cell_renderer, text=0, foreground=3)
         column.set_sort_column_id(1)
         self.playlist.append_column(column)
-        self.playlist.connect("cursor-changed", self.playlist_changed)
         self.playlist.connect("row-activated", self.play_item)
 
         self.player = VLCWidget() #gtk.DrawingArea()
@@ -136,24 +145,16 @@ class MainForm(object):
         self.playlist.set_model(store)
         self.playlist_count.set_text(str(len(files)))
 
-    def playlist_changed(self, grid, *args, **kwargs):
-        model, it = self.playlist.get_selection().get_selected()
-        file_name = model.get_value(it, 1)
-        print 'selected:', file_name, args
-
-    def play_item(self, grid, *args, **kwargs):
+    def play_item(self, grid, path, *args, **kwargs):
         model, it = self.playlist.get_selection().get_selected()
         file_name, file_path = model.get_value(it, 0), model.get_value(it, 1)
 
-        print 'start_play:', file_name, file_path
+        print 'play_item:', file_name, file_path, path
         self.set_title(file_name)
         self.player.play(file_path)
 
-        reset_it = model.get_iter_root()
-        while reset_it:
+        for reset_it in _model_iter(model):
             model.set_value(reset_it, 3, self.config['normal'])
-            reset_it = model.iter_next(reset_it)
-
         model.set_value(it, 3, self.config['active'])
 
     def play_started(self, *args):
@@ -162,15 +163,85 @@ class MainForm(object):
     def do_somth(self, *args):
         print 'do_soooo'
 
-class JumpForm(object):
-    pass
+    def jump_to_media(self, *args):
+        f = JumpForm(self.master, self.playlist.get_model())
+        media = f.get_selected_media()
+        print 'jump_to_media: ', media
+        self.select_media(media)
+
+    def select_media(self, media):
+        model = self.playlist.get_model()
+        for it in _model_iter(model):
+            if media == model.get_value(it, 1):
+                tree_path = model.get_path(it)
+                self.playlist.get_selection().select_iter(it)
+                self.playlist.row_activated(tree_path, self.playlist.get_column(0))
+                self.playlist.scroll_to_cell(tree_path)
+                break
+        else:
+            print 'ERROR: invalid media to select', media
 
 
 class PlayerForm(object):
     pass
 
 
+class JumpForm(object):
+    def __init__(self, parent, files):
+        self.model_filter = files.filter_new()
+        self.model_filter.set_visible_func(self.filter_media)
 
+        self.form = form = gtk.Dialog('Jump to media', parent)
+        form.set_modal(True)
+        form.set_position(gtk.WIN_POS_CENTER)
+
+        self.playlist_filter_label = gtk.Label('Search')
+        self.playlist_filter = gtk.Entry()
+        self.playlist_filter.connect('preedit-changed', self.refilter_medias)
+        self.playlist_count = gtk.Label('<count>')
+        self.playlist_count.set_size_request(30, 10)
+
+        self.playlist = gtk.TreeView()
+        self.playlist.set_model(self.model_filter)
+        self.playlist.set_size_request(400, 300)
+        column = gtk.TreeViewColumn("type", gtk.CellRendererText(), text=2)
+        column.set_sort_column_id(0)
+        self.playlist.append_column(column)
+        cell_renderer = gtk.CellRendererText()
+        cell_renderer.set_property('foreground-set', True)
+        column = gtk.TreeViewColumn("name", cell_renderer, text=0, foreground=3)
+        column.set_sort_column_id(1)
+        self.playlist.append_column(column)
+        self.playlist.connect("row-activated", self.media_selected)
+
+        filter_box = gtk.HBox(False, 5)
+        filter_box.pack_start(self.playlist_filter_label, False)
+        filter_box.pack_start(self.playlist_filter, True, True)
+        filter_box.pack_start(self.playlist_count, False)
+
+        playlist_box = self.form.get_content_area()
+        playlist_box.pack_start(filter_box, False)
+        playlist_box.pack_start(self.playlist, True, True)
+        self.form.show_all()
+
+    def get_selected_media(self):
+        result = None
+        if gtk.RESPONSE_OK == self.form.run():
+            model, it = self.playlist.get_selection().get_selected()
+            result = model.get_value(it, 1)
+        self.form.destroy()
+        return result
+
+    def filter_media(self, model, it, *args):
+        file_name = model.get_value(it, 0)
+        text = self.playlist_filter.get_text() or ''
+        return text in file_name
+
+    def refilter_medias(self, entry, preedit, user_data):
+        self.model_filter.refilter()
+
+    def media_selected(self, *args):
+        self.form.response(gtk.RESPONSE_OK)
 
 def main(files):
     app = MainForm()
