@@ -18,7 +18,10 @@ def _model_iter(model):
 
 class MainForm(object):
     def __init__(self):
+        self.accelgroup = gtk.AccelGroup()
+
         self.master = master = gtk.Window()
+        master.add_accel_group(self.accelgroup)
         master.set_title("nasu ~")
         master.set_position(gtk.WIN_POS_CENTER)
         master.connect("destroy", gtk.main_quit)
@@ -27,6 +30,8 @@ class MainForm(object):
         self.playlist.connect("media-selected", self.play_media)
 
         self.player = VLCWidget() #gtk.DrawingArea()
+        self.player.w.add_accel_group(self.accelgroup)
+
         self.player.set_size_request(400, 300)
         self.player.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse("brown"))
@@ -37,25 +42,16 @@ class MainForm(object):
         self.pos.set_increments(1, 10)
         self.pos.set_digits(0)
 
-        #scale.connect("value-changed", self.on_changed)
-
         self.volume = gtk.VScale()
         self.volume.set_range(0, 10)
         self.volume.set_digits(0)
-        #scale.connect("value-changed", self.on_changed)
 
         player_control_box = gtk.HBox(False, 5)
         player_control_box.pack_start(self.pos, True, True)
         player_control_box.pack_start(self.volume, False)
 
-
-
-        # accelerator
-        self.accelgroup = gtk.AccelGroup()
-        master.add_accel_group(self.accelgroup)
-        self.actiongroup = gtk.ActionGroup('')
-
         # Create a MenuBar
+        self.actiongroup = gtk.ActionGroup('')
         menubar = gtk.MenuBar()
         media_action = gtk.Action('Media', 'Media', None, None)
         self.actiongroup.add_action(media_action)
@@ -124,8 +120,8 @@ class MainForm(object):
     def play_started(self, *args):
         print 'len:', self.player.get_length()
 
-    def do_somth(self, *args):
-        print 'do_soooo'
+    def do_somth(self, action):
+        print 'do_soooo', action.get_name()
 
 
 

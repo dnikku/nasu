@@ -11,8 +11,6 @@ class Windowed(gtk.DrawingArea):
 
         self.w = gtk.Window(gtk.WINDOW_POPUP)
         self.w.set_decorated(False)
-        self.w.connect('window-state-event', self.update_state)
-
         self.w.show()
 
         def handle_move(*args, **kwargs):
@@ -26,15 +24,17 @@ class Windowed(gtk.DrawingArea):
             return True
         self.connect("map", handle_embed)
 
+        def update_state(w, event, *args):
+            print 'update_state:', event.new_window_state
+            self.is_fullscreen = (event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN)
+        self.w.connect('window-state-event', update_state)
+
     def do_size_allocate(self, allocation):
         #print 'do_size:', allocation
         self.w.resize(allocation.width, allocation.height)
         #if self.flags() & gtk.REALIZED:
         #super(Windowed, self).do_size_allocate(self, allocation)
 
-    def update_state(self, w, event, *args):
-        print 'update_state:', event.new_window_state
-        self.is_fullscreen = (event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN)
 
 
 class WindowsVLCWidget(Windowed):
@@ -50,7 +50,7 @@ class WindowsVLCWidget(Windowed):
         self._player.set_hwnd(self.w.window.handle)
 
         self.set_size_request(320, 200)
-        gobject.timeout_add(1000, self._play_status)
+        #gobject.timeout_add(1000, self._play_status)
 
     def play(self, file_path):
         self._player.set_media(self.vlc_instance.media_new(file_path))
@@ -71,10 +71,13 @@ class WindowsVLCWidget(Windowed):
         return True # enble repetation
 
     def toggle_fullscreen(self, *args):
-        if getattr(self, 'is_fullscreen', None):
+        is_fullscreen =  getattr(self, 'is_fullscreen', None)
+        print 'is_full:', is_fullscreen
+        if is_fullscreen:
             self.w.unfullscreen()
         else:
             self.w.fullscreen()
+
 
 class FakeWidget(gtk.Label):
     __gsignals__ = {
