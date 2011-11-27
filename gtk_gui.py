@@ -2,11 +2,8 @@
 import gtk, gobject
 from gtk_vlcplayer import VLCWidget
 
-
-config = {
-    'normal': 'black',
-    'active': 'red'
-    }
+from functools import partial
+from settings import COLORS, JUMP
 
 
 def _model_iter(model):
@@ -81,6 +78,7 @@ class MainForm(object):
         self.player.modify_bg(gtk.STATE_NORMAL,
                               gtk.gdk.color_parse("brown"))
         self.player.connect('play-started', self.play_started)
+        self.player.connect('play-ended', self.playlist.jump_to_next)
 
         self.pos = gtk.HScale()
         self.pos.set_range(0, 100)
@@ -116,16 +114,27 @@ class MainForm(object):
         menubar.append(playback_menuitem)
         playback_menu = gtk.Menu()
         playback_menuitem.set_submenu(playback_menu)
-        playback_menu.append(self.create_menu_item('Play/Pause', 'p', self.do_somth))
-        playback_menu.append(self.create_menu_item('Stop', 's', self.do_somth))
+        playback_menu.append(self.create_menu_item('Play/Pause', 'p', self.player.toggle_pause))
+        playback_menu.append(self.create_menu_item('Stop', 's', self.player.stop))
         playback_menu.append(self.create_menu_item('Prev', 'v', self.playlist.jump_to_prev))
         playback_menu.append(self.create_menu_item('Next', 'n', self.playlist.jump_to_next))
         playback_menu.append(self.create_menu_item('Jump to media', 'j',
                                                    lambda _: self.switch_mode(self.searchlist_mode)))
 
-        playback_menu.append(self.create_menu_item('Jump forward', 'f', self.do_somth))
-        playback_menu.append(self.create_menu_item('Jump backward', 'b', self.do_somth))
-        playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
+        playback_menu.append(self.create_menu_item(
+                'Jump forward', 'f',
+                partial(self.player.jump_relative, JUMP['FORWARD'])))
+        playback_menu.append(self.create_menu_item(
+                'Jump short forward', '<Control>f',
+                partial(self.player.jump_relative, JUMP['SHORT_FORWARD'])))
+        playback_menu.append(self.create_menu_item(
+                'Jump backward', 'b',
+                partial(self.player.jump_relative, -JUMP['BACKWARD'])))
+        playback_menu.append(self.create_menu_item(
+                'Jump short backward', '<Control>b',
+                partial(self.player.jump_relative, -JUMP['SHORT_BACKWARD'])))
+
+        #playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
         playback_menu.append(self.create_menu_item('Fullscreen', 'z',
                                                    lambda _: self.current_mode.toggle_fullscreen()))
 
@@ -288,7 +297,7 @@ class Playlist(gtk.VBox):
             model.append([f['name'],
                           f['path'],
                           f['mime'],
-                          config['normal'],
+                          COLORS['normal'],
                           ])
 
     def enter_search_mode(self, *args):
@@ -344,8 +353,8 @@ class Playlist(gtk.VBox):
         file_name, file_path = model.get_value(it, 0), model.get_value(it, 1)
 
         for reset_it in _model_iter(model):
-            model.set_value(reset_it, 3, config['normal'])
-        model.set_value(it, 3, config['active'])
+            model.set_value(reset_it, 3, COLORS['normal'])
+        model.set_value(it, 3, COLORS['active'])
         self.emit('media-selected', file_name, file_path)
 
     def searchlist_selected(self, grid, path, *arg):

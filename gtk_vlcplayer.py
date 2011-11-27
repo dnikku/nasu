@@ -35,8 +35,6 @@ class Windowed(gtk.DrawingArea):
 
         self.connect("map", handle_embed)
 
-
-
     def do_size_allocate(self, allocation):
         #print 'do_size:', allocation
         self.w.resize(allocation.width, allocation.height)
@@ -48,6 +46,8 @@ class Windowed(gtk.DrawingArea):
 class WindowsVLCWidget(Windowed):
     __gsignals__ = {
         'play-started': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-paused': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-ended': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         'play-stopped': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         }
 
@@ -58,13 +58,35 @@ class WindowsVLCWidget(Windowed):
         self._player.set_hwnd(self.w.window.handle)
 
         self.set_size_request(320, 200)
-        #gobject.timeout_add(1000, self._play_status)
+        gobject.timeout_add(1000, self._play_status)
 
     def play(self, file_path):
         self._player.set_media(self.vlc_instance.media_new(file_path))
         self._player.play()
-
         self.emit('play-started')
+
+    def toggle_pause(self, *args):
+        if self._player.get_state() == vlc.State.Paused:
+            self._player.play()
+            self.emit('play-started')
+        else:
+            self._player.pause()
+            self.emit('play-paused')
+
+    def stop(self, *args):
+        self._player.stop()
+        self.emit('play-stopped')
+
+    def jump_relative(self, relative, *args):
+        print 'jump_relative:', relative
+        new_time = self.get_time() + relative
+        if new_time <= 0:
+            new_time = 0
+        elif new_time >= self.get_length():
+            new_time = self.get_length()
+        self._player.set_time(new_time*1000)
+        print ('new_play_status: pos=%s/%s, st=%s'
+               % (self.get_time(), self.get_length(), self._player.get_state()))
 
     def get_length(self):
         """ total play duration, in seconds """
@@ -75,7 +97,10 @@ class WindowsVLCWidget(Windowed):
         return int(self._player.get_time()/1000)
 
     def _play_status(self, *args):
-        print 'play_status: ', self.get_length(), self.get_time()
+        print ('play_status: pos=%s/%s, st=%s'
+               % (self.get_time(), self.get_length(), self._player.get_state()))
+        if self._player.get_state() == vlc.State.Ended:
+            self.emit('play-ended')
         return True # enble repetation
 
     def fullscreen(self, *args):
@@ -103,13 +128,21 @@ class FakeWidget(Windowed):
     def play(self, file_path):
         self.label.set_text(file_path)
 
+    def toggle_pause(self, *args):
+        pass
+
+    def stop(self, *args):
+        pass
+
+    def jump_relative(self, relative, *args):
+        print 'jump_relative:', relative
+        pass
+
     def fullscreen(self, *args):
-        if not getattr(self, 'is_fullscreen', None):
-            self.w.fullscreen()
+        self.w.fullscreen()
 
     def unfullscreen(self, *args):
-        if getattr(self, 'is_fullscreen', None):
-            self.w.unfullscreen()
+        self.w.unfullscreen()
 
 
 if sys.platform == 'win32':
