@@ -1,5 +1,5 @@
 
-all: run-local
+all: deploy-win7
 
 clean-pyc:
 	find . -name '*.pyc' | xargs rm -f

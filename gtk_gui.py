@@ -17,6 +17,49 @@ def _model_iter(model):
 
 
 class MainForm(object):
+    class Mode(object):
+        def enter(self): pass
+        def leave(self): pass
+
+        def toggle_fullscreen(self):
+            print type(self), ': invalid call'
+
+    class PlaylistMode(Mode):
+        def __init__(self, mainfrm):
+            self.m = mainfrm
+
+        def enter(self):
+            self.m.playlist.enter_list_mode()
+
+        def toggle_fullscreen(self):
+            self.m.switch_mode(self.m.fullscreen_mode)
+
+    class SearchlistMode(Mode):
+        def __init__(self, mainfrm):
+            self.m = mainfrm
+
+        def enter(self):
+            self.m.master.remove_accel_group(self.m.accelgroup)
+            self.m.playlist.enter_search_mode()
+
+        def leave(self):
+            self.m.master.add_accel_group(self.m.accelgroup)
+
+        def toggle_fullscreen(self):
+            print "SearchListMode: invalid"
+
+    class FullscreenMode(Mode):
+        def __init__(self, mainfrm):
+            self.m = mainfrm
+
+        def enter(self):
+            self.m.player.fullscreen()
+
+        def toggle_fullscreen(self):
+            self.m.player.unfullscreen()
+            self.m.switch_mode(self.m.playlist_mode)
+
+
     def __init__(self):
         self.accelgroup = gtk.AccelGroup()
 
@@ -28,6 +71,7 @@ class MainForm(object):
 
         self.playlist = Playlist(self)
         self.playlist.connect("media-selected", self.play_media)
+        self.playlist.connect("media-searched", self.searched_media)
 
         self.player = VLCWidget() #gtk.DrawingArea()
         self.player.w.add_accel_group(self.accelgroup)
@@ -76,13 +120,13 @@ class MainForm(object):
         playback_menu.append(self.create_menu_item('Prev', 'v', self.playlist.jump_to_prev))
         playback_menu.append(self.create_menu_item('Next', 'n', self.playlist.jump_to_next))
         playback_menu.append(self.create_menu_item('Jump to media', 'j',
-                                                   self.playlist.enter_search_mode))
+                                                   lambda _: self.switch_mode(self.searchlist_mode)))
 
         playback_menu.append(self.create_menu_item('Jump forward', 'f', self.do_somth))
         playback_menu.append(self.create_menu_item('Jump backward', 'b', self.do_somth))
         playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
         playback_menu.append(self.create_menu_item('Fullscreen', 'z',
-                                                   self.player.toggle_fullscreen))
+                                                   lambda _: self.current_mode.toggle_fullscreen()))
 
         player_box = gtk.VBox(False, 5)
         player_box.pack_start(self.player, True, True)
@@ -97,6 +141,19 @@ class MainForm(object):
         window_box.pack_start(main_box, True, True)
         self.master.add(window_box)
         self.master.show_all()
+
+        self.playlist_mode = self.PlaylistMode(self)
+        self.searchlist_mode = self.SearchlistMode(self)
+        self.fullscreen_mode = self.FullscreenMode(self)
+        self.current_mode = self.Mode()
+        self.switch_mode(self.playlist_mode)
+
+    def switch_mode(self, new_mode):
+        old_mode, self.current_mode = self.current_mode, new_mode
+        old_mode.leave()
+        new_mode.enter()
+        print 'switch_mode: %s -> %s' % (old_mode, new_mode)
+        return new_mode
 
     def create_menu_item(self, name, accelerator, callback):
         action = gtk.Action(name, name, name, None)
@@ -113,9 +170,15 @@ class MainForm(object):
         self.playlist.add_media_files(files)
 
     def play_media(self, playlist, file_name, file_path):
-        print 'play_item:', file_name, file_path
+        print 'play_media:', file_name, file_path
         self.set_title(file_name)
         self.player.play(file_path)
+
+    def searched_media(self, playlist, file_name, file_path):
+        print 'search_media:', file_name, file_path
+        self.switch_mode(self.playlist_mode)
+        if file_path:
+            self.play_media(playlist, file_name, file_path)
 
     def play_started(self, *args):
         print 'len:', self.player.get_length()
@@ -128,6 +191,8 @@ class MainForm(object):
 class Playlist(gtk.VBox):
     __gsignals__ = {
         'media-selected': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                           (gobject.TYPE_STRING, gobject.TYPE_STRING)),
+        'media-searched': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
                            (gobject.TYPE_STRING, gobject.TYPE_STRING)),
         }
 
@@ -173,13 +238,19 @@ class Playlist(gtk.VBox):
         column.set_sort_column_id(1)
         searchlist.append_column(column)
 
+        def searchlist_keydown(entry, key_event):
+            print 'keyeey:', key_event, key_event.keyval
+            if key_event.keyval == 65307: # escape
+                self.emit('media-searched', None, None)
+        searchlist.connect('key-release-event', searchlist_keydown)
+
         searchlist_filter_label = gtk.Label('Search')
         searchlist_filter = gtk.Entry()
         searchlist.searchlist_filter = searchlist_filter
         def searchlist_filter_keydown(entry, key_event):
             print 'keyeey:', key_event, key_event.keyval
             if key_event.keyval == 65307: # escape
-                self.enter_list_mode()
+                self.emit('media-searched', None, None)
             elif key_event.keyval == 65293: # enter
                 pass
             else:
@@ -189,7 +260,6 @@ class Playlist(gtk.VBox):
 
         searchlist_count = gtk.Label('<count>')
         searchlist_count.set_size_request(30, 10)
-
 
         filter_box = gtk.HBox(False, 5)
         filter_box.pack_start(searchlist_filter_label, False)
@@ -221,23 +291,26 @@ class Playlist(gtk.VBox):
                           ])
 
     def enter_search_mode(self, *args):
-        self.remove(self.playlist)
-        self.pack_start(self.searchlist.searchlist_box)
-        self.searchlist.searchlist_box.show_all()
         model_filter = self.playlist.get_model().filter_new()
         model_filter.set_visible_func(self.searchlist.filter_media)
         self.searchlist.set_model(model_filter)
+
+        if self.playlist in self.get_children():
+            self.remove(self.playlist)
+        if self.searchlist.searchlist_box not in self.get_children():
+            self.pack_start(self.searchlist.searchlist_box)
+        self.searchlist.searchlist_box.show_all()
         self.searchlist.searchlist_filter.grab_focus()
 
-        self.mainform.master.remove_accel_group(self.mainform.accelgroup)
-
     def enter_list_mode(self, *args):
-        self.remove(self.searchlist.searchlist_box)
         self.searchlist.set_model(None)
-        self.pack_start(self.playlist, True, True)
+        if self.searchlist.searchlist_box in self.get_children():
+            self.remove(self.searchlist.searchlist_box)
+        if self.playlist not in self.get_children():
+            self.pack_start(self.playlist, True, True)
         self.playlist.show_all()
 
-        self.mainform.master.add_accel_group(self.mainform.accelgroup)
+
 
     def jump_to_next(self, *args):
         model = self.playlist.get_model()
@@ -276,9 +349,8 @@ class Playlist(gtk.VBox):
 
     def searchlist_selected(self, grid, path, *arg):
         model, it = self.searchlist.get_selection().get_selected()
-        media = model.get_value(it, 1)
-        self.enter_list_mode()
-        self.select_media(media)
+        file_name, file_path = model.get_value(it, 0), model.get_value(it, 1)
+        self.emit('media-searched', file_name, file_path)
 
     def select_media(self, media):
         model = self.playlist.get_model()

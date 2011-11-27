@@ -70,28 +70,40 @@ class WindowsVLCWidget(Windowed):
         print 'play_status: ', self.get_length(), self.get_time()
         return True # enble repetation
 
-    def toggle_fullscreen(self, *args):
-        is_fullscreen =  getattr(self, 'is_fullscreen', None)
-        print 'is_full:', is_fullscreen
-        if is_fullscreen:
-            self.w.unfullscreen()
-        else:
+    def fullscreen(self, *args):
+        if not getattr(self, 'is_fullscreen', None):
             self.w.fullscreen()
 
+    def unscreen(self, *args):
+        if getattr(self, 'is_fullscreen', None):
+            self.w.unfullscreen()
 
-class FakeWidget(gtk.Label):
+
+class FakeWidget(Windowed):
     __gsignals__ = {
         'play-started': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         'play-stopped': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         }
 
     def __init__(self):
-        gtk.Label.__init__(self)
+        super(FakeWidget, self).__init__()
+        self.label = gtk.Label()
+        self.label.set_size_request(320, 200)
+        self.w.add(self.label)
+        self.label.show()
+
         self.set_size_request(320, 200)
 
     def play(self, file_path):
-        self.set_text(file_path)
+        self.label.set_text(file_path)
 
+    def fullscreen(self, *args):
+        if not getattr(self, 'is_fullscreen', None):
+            self.w.fullscreen()
+
+    def unfullscreen(self, *args):
+        if getattr(self, 'is_fullscreen', None):
+            self.w.unfullscreen()
 
 
 if sys.platform == 'win32':
