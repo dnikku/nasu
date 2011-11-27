@@ -11,11 +11,11 @@ def get_root_path():
 
 ignore_files = [
     '.txt',
-    '.srt', '.sub'
+    '.srt', '.sub',
     '.nfo',
     '.url',
-    '.idx',
-    '.db',
+    '.idx', '.dts', '.ac3',
+    '.db', '.torrent',
     ]
 
 def dir_files(start_from=get_root_path()):
@@ -31,8 +31,9 @@ def dir_files(start_from=get_root_path()):
         else:
             for name in files:
                 if any(filter(lambda x: name.endswith(x), ignore_files)):
-                    print 'skip file:', name
+                    print 'skip file: "%s"' % name
                 else:
+                    print 'add file: "%s"' % name
                     file_path = path.abspath(path.join(root, name))
                     yield {'name': name,
                            'path': file_path,
