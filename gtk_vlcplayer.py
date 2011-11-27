@@ -11,6 +11,7 @@ class Windowed(gtk.DrawingArea):
 
         self.w = gtk.Window(gtk.WINDOW_POPUP)
         self.w.set_decorated(False)
+        self.w.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         self.w.show()
 
         def sync_move(*args, **kwargs):
