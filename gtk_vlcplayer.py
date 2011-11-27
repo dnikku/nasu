@@ -13,21 +13,28 @@ class Windowed(gtk.DrawingArea):
         self.w.set_decorated(False)
         self.w.show()
 
-        def handle_move(*args, **kwargs):
+        def sync_move(*args, **kwargs):
             x,y = self.get_toplevel().window.get_position()
             #print 'do_pos', [x, y]
             self.w.window.move(x, y)
+        def sync_state(w, event, *args):
+            print 'sync_state:', event.new_window_state
+            if event.new_window_state == gtk.gdk.WINDOW_STATE_ICONIFIED:
+                self.w.hide()
+            else:
+                self.w.show()
+
         def handle_embed(*args, **kwargs):
             self.w.set_transient_for(self.get_toplevel())
             self.get_toplevel().connect('configure-event',
-                                        handle_move)
+                                        sync_move)
+            self.get_toplevel().connect('window-state-event',
+                                         sync_state)
             return True
+
         self.connect("map", handle_embed)
 
-        def update_state(w, event, *args):
-            print 'update_state:', event.new_window_state
-            self.is_fullscreen = (event.new_window_state == gtk.gdk.WINDOW_STATE_FULLSCREEN)
-        self.w.connect('window-state-event', update_state)
+
 
     def do_size_allocate(self, allocation):
         #print 'do_size:', allocation
@@ -71,12 +78,10 @@ class WindowsVLCWidget(Windowed):
         return True # enble repetation
 
     def fullscreen(self, *args):
-        if not getattr(self, 'is_fullscreen', None):
-            self.w.fullscreen()
+        self.w.fullscreen()
 
-    def unscreen(self, *args):
-        if getattr(self, 'is_fullscreen', None):
-            self.w.unfullscreen()
+    def unfullscreen(self, *args):
+        self.w.unfullscreen()
 
 
 class FakeWidget(Windowed):

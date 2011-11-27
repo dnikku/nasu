@@ -15,6 +15,7 @@ ignore_files = [
     '.nfo',
     '.url',
     '.idx',
+    '.db',
     ]
 
 def dir_files(start_from=get_root_path()):
@@ -30,9 +31,10 @@ def dir_files(start_from=get_root_path()):
         else:
             for name in files:
                 if any(filter(lambda x: name.endswith(x), ignore_files)):
-                    continue
-                file_path = path.abspath(path.join(root, name))
-                yield {'name': name,
-                       'path': file_path,
-                       'mime': path.splitext(name)[1],
-                       }
+                    print 'skip file:', name
+                else:
+                    file_path = path.abspath(path.join(root, name))
+                    yield {'name': name,
+                           'path': file_path,
+                           'mime': path.splitext(name)[1],
+                           }

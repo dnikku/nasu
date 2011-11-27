@@ -33,6 +33,7 @@ class MainForm(object):
 
         def toggle_fullscreen(self):
             self.m.switch_mode(self.m.fullscreen_mode)
+            self.m.playlist.enter_list_mode()
 
     class SearchlistMode(Mode):
         def __init__(self, mainfrm):
@@ -309,7 +310,7 @@ class Playlist(gtk.VBox):
         if self.playlist not in self.get_children():
             self.pack_start(self.playlist, True, True)
         self.playlist.show_all()
-
+        self.playlist.grab_focus()
 
 
     def jump_to_next(self, *args):
