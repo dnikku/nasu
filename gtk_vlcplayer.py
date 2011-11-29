@@ -3,6 +3,7 @@ gtk.gdk.threads_init()
 
 import sys
 import gobject
+import os
 
 
 class Windowed(gtk.DrawingArea):
@@ -61,16 +62,33 @@ class WindowsVLCWidget(Windowed):
         gobject.timeout_add(1000, self._play_status)
 
     def play(self, file_path):
-        self._player.set_media(self.vlc_instance.media_new(file_path))
+        self._player.set_media(self.vlc_instance.media_new(
+                file_path,
+                'sub-filter=marq', #'vout=caca'
+                ))
+
         self._player.play()
+        _, file_name = os.path.split(file_path)
+
+        self.set_text(file_name)
+
         self.emit('play-started')
+
+    def set_text(self, text, **kwargs):
+        self._player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, text)
+        self._player.video_set_marquee_int(vlc.VideoMarqueeOption.Timeout,
+                                           kwargs.get('timeout', 3000))
+        self._player.video_set_marquee_int(vlc.VideoMarqueeOption.Position,
+                                           kwargs.get('position', 8))
 
     def toggle_pause(self, *args):
         if self._player.get_state() == vlc.State.Paused:
             self._player.play()
+            self.set_text('PLAY', position=5, timeout=2000)
             self.emit('play-started')
         else:
             self._player.pause()
+            self.set_text('PAUSED', position=5, timeout=0)
             self.emit('play-paused')
 
     def stop(self, *args):
@@ -85,8 +103,13 @@ class WindowsVLCWidget(Windowed):
         elif new_time >= self.get_length():
             new_time = self.get_length()
         self._player.set_time(new_time*1000)
+        self.set_text('%s / %s' % (format_duration(new_time),
+                                   format_duration(self.get_length())))
         print ('new_play_status: pos=%s/%s, st=%s'
                % (self.get_time(), self.get_length(), self._player.get_state()))
+
+    def set_volume(self, relative, *args):
+        pass
 
     def get_length(self):
         """ total play duration, in seconds """
@@ -113,6 +136,8 @@ class WindowsVLCWidget(Windowed):
 class FakeWidget(Windowed):
     __gsignals__ = {
         'play-started': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-paused': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
+        'play-ended': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         'play-stopped': (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE, ()),
         }
 
@@ -143,6 +168,21 @@ class FakeWidget(Windowed):
 
     def unfullscreen(self, *args):
         self.w.unfullscreen()
+
+
+def format_duration(seconds):
+    hours = int(seconds/ 3600)
+    seconds = seconds - hours * 3600
+    minutes = int(seconds/60)
+    seconds = seconds - minutes*60
+
+    s = ''
+    if hours:
+        s += '%sh ' % hours
+    if minutes:
+        s += '%smin ' % minutes
+    s += '%ssec' % seconds
+    return s
 
 
 if sys.platform == 'win32':
