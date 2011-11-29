@@ -17,8 +17,9 @@ class Windowed(gtk.DrawingArea):
 
         def sync_move(*args, **kwargs):
             x,y = self.get_toplevel().window.get_position()
-            #print 'do_pos', [x, y]
-            self.w.window.move(x, y)
+            o_x, o_y = gtk_translate_coordinates(self, self.get_toplevel(), 0, 0)
+            print 'do_pos:', o_x, o_y
+            self.w.window.move(x + o_x, y + 28)
         def sync_state(w, event, *args):
             print 'sync_state:', event.new_window_state
             if event.new_window_state == gtk.gdk.WINDOW_STATE_ICONIFIED:
@@ -42,6 +43,18 @@ class Windowed(gtk.DrawingArea):
         #if self.flags() & gtk.REALIZED:
         #super(Windowed, self).do_size_allocate(self, allocation)
 
+
+def gtk_translate_coordinates(widget, relative_widget, x, y):
+    """ replacement for:
+    self.translate_coordinates(self.get_toplevel(), -1, -1)
+    """
+    parent = widget
+    while parent != relative_widget:
+        x += parent.get_allocation()[0]
+        y += parent.get_allocation()[1]
+        parent = parent.get_parent()
+
+    return (x, y)
 
 
 class WindowsVLCWidget(Windowed):
@@ -120,8 +133,8 @@ class WindowsVLCWidget(Windowed):
         return int(self._player.get_time()/1000)
 
     def _play_status(self, *args):
-        print ('play_status: pos=%s/%s, st=%s'
-               % (self.get_time(), self.get_length(), self._player.get_state()))
+        #print ('play_status: pos=%s/%s, st=%s'
+        #       % (self.get_time(), self.get_length(), self._player.get_state()))
         if self._player.get_state() == vlc.State.Ended:
             self.emit('play-ended')
         return True # enble repetation
