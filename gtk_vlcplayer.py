@@ -10,7 +10,7 @@ class Windowed(gtk.DrawingArea):
     def __init__(self):
         super(Windowed, self).__init__()
 
-        self.w = gtk.Window(gtk.WINDOW_POPUP)
+        self.w = gtk.Window()
         self.w.set_decorated(False)
         self.w.modify_bg(gtk.STATE_NORMAL, gtk.gdk.color_parse('black'))
         self.w.show()
