@@ -18,7 +18,6 @@ class Windowed(gtk.DrawingArea):
         def sync_move(*args, **kwargs):
             x,y = self.get_toplevel().window.get_position()
             o_x, o_y = gtk_translate_coordinates(self, self.get_toplevel(), 0, 0)
-            print 'do_pos:', o_x, o_y
             self.w.window.move(x + o_x, y + 28)
         def sync_state(w, event, *args):
             print 'sync_state:', event.new_window_state
@@ -122,7 +121,22 @@ class WindowsVLCWidget(Windowed):
                % (self.get_time(), self.get_length(), self._player.get_state()))
 
     def set_volume(self, relative, *args):
-        pass
+        volume = self._player.audio_get_volume()
+        volume += relative
+        if volume < 0:
+            volume = 0
+        elif volume > 100:
+            volume = 100
+        self._player.audio_set_volume(volume)
+        self.set_text('VOLUME: %s' % volume, position=5, timeout=2000)
+
+    def toggle_mute(self, *args):
+        self._player.audio_toggle_mute()
+        if self._player.audio_get_mute():
+            self.set_text('MUTE', position=5, timeout=0)
+        else:
+            volume = self._player.audio_get_volume()
+            self.set_text('VOLUME: %s' % volume, position=5, timeout=2000)
 
     def get_length(self):
         """ total play duration, in seconds """
@@ -174,6 +188,12 @@ class FakeWidget(Windowed):
 
     def jump_relative(self, relative, *args):
         print 'jump_relative:', relative
+        pass
+
+    def set_volume(self, relative, *args):
+        pass
+
+    def toggle_mute(self, *args):
         pass
 
     def fullscreen(self, *args):

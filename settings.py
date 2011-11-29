@@ -11,3 +11,12 @@ JUMP = {
     'BACKWARD': 3*60,
     'SHORT_BACKWARD': 30,
 }
+
+AUDIO_VOLUME = {
+    'INCREASE': 10,
+    'DECREASE': -10
+}
+
+
+SHORT_KEY = {
+}
