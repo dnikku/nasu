@@ -181,17 +181,18 @@ class MainForm(object):
 
     def play_media(self, playlist, file_name, file_path):
         print 'play_media:', file_name, file_path
-        self.set_title(file_name)
+        curr, count = self.playlist.get_selected()
+        self.set_title('%s/%s : %s' % (curr, count, file_name))
         self.player.play(file_path)
 
     def searched_media(self, playlist, file_name, file_path):
         print 'search_media:', file_name, file_path
         self.switch_mode(self.playlist_mode)
         if file_path:
-            self.play_media(playlist, file_name, file_path)
+            self.playlist.select_media(file_path)
 
     def play_started(self, *args):
-        print 'len:', self.player.get_length()
+        pass
 
     def do_somth(self, action):
         print 'do_soooo', action.get_name()
@@ -340,8 +341,15 @@ class Playlist(gtk.VBox):
             current = (current - 1 + length)% length
             self.select_media_by_path((current,))
 
-    def jump_to(self, media):
-        pass
+    def select_media(self, media):
+        model = self.playlist.get_model()
+        for it in _model_iter(model):
+            if media == model.get_value(it, 1):
+                tree_path = model.get_path(it)
+                self.select_media_by_path(tree_path)
+                break
+        else:
+            print 'ERROR: invalid media to select', media
 
     def select_media_by_path(self, tree_path):
         self.playlist.set_cursor(tree_path)
@@ -362,16 +370,11 @@ class Playlist(gtk.VBox):
         file_name, file_path = model.get_value(it, 0), model.get_value(it, 1)
         self.emit('media-searched', file_name, file_path)
 
-    def select_media(self, media):
-        model = self.playlist.get_model()
-        for it in _model_iter(model):
-            if media == model.get_value(it, 1):
-                tree_path = model.get_path(it)
-                self.select_media_by_path(tree_path)
-                break
-        else:
-            print 'ERROR: invalid media to select', media
 
+    def get_selected(self):
+        """ Returns (current, total count)"""
+        model, it = self.playlist.get_selection().get_selected()
+        return (1 + model.get_path(it)[0] if it else 0, len(model))
 
 
 class PlayerForm(object):
