@@ -5,5 +5,6 @@ import gtk_gui
 
 
 if __name__ == '__main__':
-    #play()
+    print '*'*80, 'BEGIN'
     gtk_gui.main(dir_files())
+    print '*'*80, 'END'
