@@ -249,7 +249,6 @@ class Playlist(gtk.VBox):
 
         self.searchlist = self._create_searchlist()
         self.searchlist.connect("row-activated", self.searchlist_selected)
-
         self.pack_start(self.playlist, True, True)
 
     def _create_playlist(self):
@@ -265,6 +264,16 @@ class Playlist(gtk.VBox):
         column = gtk.TreeViewColumn("name", cell_renderer, text=0, foreground=3)
         column.set_sort_column_id(1)
         playlist.append_column(column)
+
+        box = gtk.HBox(False, 5)
+
+        scrolled = gtk.ScrolledWindow()
+        scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        scrolled.add(playlist)
+
+        box.pack_start(scrolled, True, True)
+        playlist.playlist_box = box
+
         return playlist
 
     def _create_searchlist(self):
@@ -310,7 +319,12 @@ class Playlist(gtk.VBox):
 
         searchlist_box = gtk.VBox()
         searchlist_box.pack_start(filter_box, False)
-        searchlist_box.pack_start(searchlist, True, True)
+
+        scrolled = gtk.ScrolledWindow()
+        scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+        scrolled.add(searchlist)
+
+        searchlist_box.pack_start(scrolled, True, True)
         searchlist.searchlist_box = searchlist_box
 
 
@@ -337,8 +351,8 @@ class Playlist(gtk.VBox):
         model_filter.set_visible_func(self.searchlist.filter_media)
         self.searchlist.set_model(model_filter)
 
-        if self.playlist in self.get_children():
-            self.remove(self.playlist)
+        if self.playlist.playlist_box in self.get_children():
+            self.remove(self.playlist.playlist_box)
         if self.searchlist.searchlist_box not in self.get_children():
             self.pack_start(self.searchlist.searchlist_box)
         self.searchlist.searchlist_box.show_all()
@@ -348,9 +362,9 @@ class Playlist(gtk.VBox):
         self.searchlist.set_model(None)
         if self.searchlist.searchlist_box in self.get_children():
             self.remove(self.searchlist.searchlist_box)
-        if self.playlist not in self.get_children():
-            self.pack_start(self.playlist, True, True)
-        self.playlist.show_all()
+        if self.playlist.playlist_box not in self.get_children():
+            self.pack_start(self.playlist.playlist_box, True, True)
+        self.playlist.playlist_box.show_all()
         self.playlist.grab_focus()
 
 
