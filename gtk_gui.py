@@ -3,7 +3,7 @@ import gtk, gobject
 from gtk_vlcplayer import VLCWidget
 
 from functools import partial
-from settings import COLORS, JUMP, AUDIO_VOLUME
+from settings import COLORS, JUMP, AUDIO_VOLUME, SHORT_KEY
 
 
 def _model_iter(model):
@@ -132,11 +132,11 @@ class MainForm(object):
         menubar.append(media_menuitem)
         media_menu = gtk.Menu()
         media_menuitem.set_submenu(media_menu)
-        media_menu.append(self.create_menu_item('Add Folder', None, self.do_somth))
-        media_menu.append(self.create_menu_item('Remove Selected', '<Control>d', self.do_somth))
-        media_menu.append(self.create_menu_item('Load List ...', None, self.do_somth))
-        media_menu.append(self.create_menu_item('Save List As ...', '<Control>s', self.do_somth))
-        media_menu.append(self.create_menu_item('Exit', '<Control>x', gtk.main_quit))
+        media_menu.append(self.create_menu_item(SHORT_KEY['ADD_FOLDER'], self.do_somth))
+        media_menu.append(self.create_menu_item(SHORT_KEY['REMOVE_SELECTED'], self.do_somth))
+        media_menu.append(self.create_menu_item(SHORT_KEY['LOAD_LIST'], self.do_somth))
+        media_menu.append(self.create_menu_item(SHORT_KEY['SAVE_LIST'], self.do_somth))
+        media_menu.append(self.create_menu_item(SHORT_KEY['EXIT'], gtk.main_quit))
 
 
         playback_action = gtk.Action('Playback', 'Playback', None, None)
@@ -145,27 +145,27 @@ class MainForm(object):
         menubar.append(playback_menuitem)
         playback_menu = gtk.Menu()
         playback_menuitem.set_submenu(playback_menu)
-        playback_menu.append(self.create_menu_item('Play/Pause', 'p', self.player.toggle_pause))
-        playback_menu.append(self.create_menu_item('Stop', 's', self.player.stop))
-        playback_menu.append(self.create_menu_item('Prev', 'v', self.playlist.jump_to_prev))
-        playback_menu.append(self.create_menu_item('Next', 'n', self.playlist.jump_to_next))
-        playback_menu.append(self.create_menu_item('Jump to media', 'j',
+        playback_menu.append(self.create_menu_item(SHORT_KEY['TOGGLE_PAUSE'], self.player.toggle_pause))
+        playback_menu.append(self.create_menu_item(SHORT_KEY['STOP'], self.player.stop))
+        playback_menu.append(self.create_menu_item(SHORT_KEY['PREV'], self.playlist.jump_to_prev))
+        playback_menu.append(self.create_menu_item(SHORT_KEY['NEXT'], self.playlist.jump_to_next))
+        playback_menu.append(self.create_menu_item(SHORT_KEY['JUMP_MEDIA'],
                                                    lambda _: self.switch_mode(self.searchlist_mode)))
         playback_menu.append(self.create_menu_item(
-                'Jump forward', 'f',
+                SHORT_KEY['JUMP_FWD'],
                 partial(self.player.jump_relative, JUMP['FORWARD'])))
         playback_menu.append(self.create_menu_item(
-                'Jump short forward', '<Control>f',
+                SHORT_KEY['JUMP_SHORT_FWD'],
                 partial(self.player.jump_relative, JUMP['SHORT_FORWARD'])))
         playback_menu.append(self.create_menu_item(
-                'Jump backward', 'b',
+                SHORT_KEY['JUMP_BKD'],
                 partial(self.player.jump_relative, -JUMP['BACKWARD'])))
         playback_menu.append(self.create_menu_item(
-                'Jump short backward', '<Control>b',
+                SHORT_KEY['JUMP_SHORT_BKD'],
                 partial(self.player.jump_relative, -JUMP['SHORT_BACKWARD'])))
 
         #playback_menu.append(self.create_menu_item('Jump to time', 't', self.do_somth))
-        playback_menu.append(self.create_menu_item('Fullscreen', 'z',
+        playback_menu.append(self.create_menu_item(SHORT_KEY['FULLSCREEN'],
                                                    lambda _: self.current_mode.toggle_fullscreen()))
 
         audio_action = gtk.Action('Audio', 'Audio', None, None)
@@ -175,16 +175,17 @@ class MainForm(object):
         audio_menu = gtk.Menu()
         audio_menuitem.set_submenu(audio_menu)
         audio_menu.append(self.create_menu_item(
-                'Increase Volume', 'i',
+                SHORT_KEY['AUDIO_VOLUME_INC'],
                 partial(self.player.set_volume, AUDIO_VOLUME['INCREASE'])))
         audio_menu.append(self.create_menu_item(
-                'Decrease Volume', 'k',
+                SHORT_KEY['AUDIO_VOLUME_DEC'],
                 partial(self.player.set_volume, AUDIO_VOLUME['DECREASE'])))
-        audio_menu.append(self.create_menu_item('Mute', 'u', self.player.toggle_mute))
+        audio_menu.append(self.create_menu_item(SHORT_KEY['AUDIO_MUTE'], self.player.toggle_mute))
 
         return menubar
 
-    def create_menu_item(self, name, accelerator, callback):
+    def create_menu_item(self, name_accelerator, callback):
+        name, accelerator = name_accelerator
         action = gtk.Action(name, name, name, None)
         action.connect('activate', callback)
         self.actiongroup.add_action_with_accel(action, accelerator)
