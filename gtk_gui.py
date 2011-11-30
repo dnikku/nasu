@@ -1,4 +1,5 @@
 from functools import partial
+import json
 
 # check: http://stackoverflow.com/questions/249283/virtualenv-on-ubuntu-with-no-site-packages
 import gtk, gobject
@@ -139,9 +140,9 @@ class MainForm(object):
         media_menu.append(self.create_menu_item(
                 SHORT_KEY['REMOVE_SELECTED'], self.playlist.remove_selected_media))
         media_menu.append(self.create_menu_item(
-                SHORT_KEY['LOAD_LIST'], self.do_somth))
+                SHORT_KEY['LOAD_LIST'], self.load_playlist_from_file))
         media_menu.append(self.create_menu_item(
-                SHORT_KEY['SAVE_LIST'], self.do_somth))
+                SHORT_KEY['SAVE_LIST'], self.save_playlist_to_file))
         media_menu.append(self.create_menu_item(
                 SHORT_KEY['EXIT'], gtk.main_quit))
 
@@ -237,6 +238,43 @@ class MainForm(object):
             print 'selected_folder:', folder
         dialog.destroy()
         self.add_mediafiles(dir_files([folder]))
+
+    def save_playlist_to_file(self, *args):
+        dialog = gtk.FileChooserDialog('Save Playlist to File',
+                                       self.master,
+                                       gtk.FILE_CHOOSER_ACTION_SAVE,
+                                       (gtk.STOCK_OK, gtk.RESPONSE_OK,
+                                        gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
+                                       )
+        filter_ = gtk.FileFilter()
+        filter_.add_pattern('*.nasu')
+        dialog.set_filter(filter_)
+        f = None
+        if dialog.run() == gtk.RESPONSE_OK:
+            f = dialog.get_filename() + '.nasu'
+            print 'selected_file_to_save:', f
+        dialog.destroy()
+
+        with open(f, 'w+') as fp:
+            self.playlist.save_to(fp)
+
+    def load_playlist_from_file(self, *args):
+        dialog = gtk.FileChooserDialog('Load Playlist to File',
+                                       self.master,
+                                       gtk.FILE_CHOOSER_ACTION_OPEN,
+                                       (gtk.STOCK_OK, gtk.RESPONSE_OK,
+                                        gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
+                                       )
+        filter_ = gtk.FileFilter()
+        filter_.add_pattern('*.nasu')
+        dialog.set_filter(filter_)
+        f = None
+        if dialog.run() == gtk.RESPONSE_OK:
+            f = dialog.get_filename()
+            print 'selected_file_to_load:', f
+        dialog.destroy()
+        with open(f, 'r') as fp:
+            self.playlist.load_from(fp)
 
     def play_started(self, *args):
         pass
@@ -358,6 +396,7 @@ class Playlist(gtk.VBox):
                           f['mime'],
                           COLORS['normal'],
                           ])
+
     def remove_selected_media(self, *args):
         model, it = self.playlist.get_selection().get_selected()
         if it:
@@ -393,7 +432,6 @@ class Playlist(gtk.VBox):
             self.pack_start(self.playlist.playlist_box, True, True)
         self.playlist.playlist_box.show_all()
         self.playlist.grab_focus()
-
 
     def jump_to_next(self, *args):
         model = self.playlist.get_model()
@@ -447,6 +485,20 @@ class Playlist(gtk.VBox):
         """ Returns (current, total count)"""
         model, it = self.playlist.get_selection().get_selected()
         return (1 + model.get_path(it)[0] if it else 0, len(model))
+
+    def save_to(self, fp):
+        model = self.playlist.get_model()
+        files = [{
+                'name': model.get_value(it, 0),
+                'path': model.get_value(it, 1),
+                'mime': model.get_value(it, 2),
+                } for it in _model_iter(model)]
+        json.dump(files, fp, indent=True)
+
+    def load_from(self, fp):
+        files = json.load(fp)
+        self.playlist.get_model().clear()
+        self.add_media_files(files)
 
 
 class PlayerForm(object):
