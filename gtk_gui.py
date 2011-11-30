@@ -1,8 +1,10 @@
+from functools import partial
+
 # check: http://stackoverflow.com/questions/249283/virtualenv-on-ubuntu-with-no-site-packages
 import gtk, gobject
 from gtk_vlcplayer import VLCWidget
 
-from functools import partial
+from media_files import dir_files
 from settings import COLORS, JUMP, AUDIO_VOLUME, SHORT_KEY
 
 
@@ -133,7 +135,7 @@ class MainForm(object):
         media_menu = gtk.Menu()
         media_menuitem.set_submenu(media_menu)
         media_menu.append(self.create_menu_item(
-                SHORT_KEY['ADD_FOLDER'], self.do_somth))
+                SHORT_KEY['ADD_FOLDER'], self.add_mediafiles_from_folder))
         media_menu.append(self.create_menu_item(
                 SHORT_KEY['REMOVE_SELECTED'], self.do_somth))
         media_menu.append(self.create_menu_item(
@@ -207,7 +209,7 @@ class MainForm(object):
     def set_title(self, text):
         self.master.set_title("nasu ~" + text)
 
-    def set_playlist(self, files):
+    def add_mediafiles(self, files):
         self.playlist.add_media_files(files)
 
     def play_media(self, playlist, file_name, file_path):
@@ -222,12 +224,25 @@ class MainForm(object):
         if file_path:
             self.playlist.select_media(file_path)
 
+    def add_mediafiles_from_folder(self, *args):
+        dialog = gtk.FileChooserDialog('Add Medias from Folder',
+                                       self.master,
+                                       gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER,
+                                       (gtk.STOCK_OK, gtk.RESPONSE_OK,
+                                        gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL)
+                                       )
+        folder = None
+        if dialog.run() == gtk.RESPONSE_OK:
+            folder = dialog.get_filename()
+            print 'selected_folder:', folder
+        dialog.destroy()
+        self.add_mediafiles(dir_files([folder]))
+
     def play_started(self, *args):
         pass
 
     def do_somth(self, action):
         print 'do_soooo', action.get_name()
-
 
 
 class Playlist(gtk.VBox):
@@ -290,7 +305,7 @@ class Playlist(gtk.VBox):
         searchlist.append_column(column)
 
         def searchlist_keydown(entry, key_event):
-            print 'keyeey:', key_event, key_event.keyval
+            #print 'keyeey:', key_event, key_event.keyval
             if key_event.keyval == 65307: # escape
                 self.emit('media-searched', None, None)
         searchlist.connect('key-release-event', searchlist_keydown)
@@ -299,7 +314,7 @@ class Playlist(gtk.VBox):
         searchlist_filter = gtk.Entry()
         searchlist.searchlist_filter = searchlist_filter
         def searchlist_filter_keydown(entry, key_event):
-            print 'keyeey:', key_event, key_event.keyval
+            #print 'keyeey:', key_event, key_event.keyval
             if key_event.keyval == 65307: # escape
                 self.emit('media-searched', None, None)
             elif key_event.keyval == 65293: # enter
@@ -426,8 +441,7 @@ class PlayerForm(object):
     pass
 
 
-
-def main(files):
+def main():
     app = MainForm()
-    app.set_playlist(files)
+    #app.add_mediafiles(dir_files())
     gtk.main()
