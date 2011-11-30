@@ -137,7 +137,7 @@ class MainForm(object):
         media_menu.append(self.create_menu_item(
                 SHORT_KEY['ADD_FOLDER'], self.add_mediafiles_from_folder))
         media_menu.append(self.create_menu_item(
-                SHORT_KEY['REMOVE_SELECTED'], self.do_somth))
+                SHORT_KEY['REMOVE_SELECTED'], self.playlist.remove_selected_media))
         media_menu.append(self.create_menu_item(
                 SHORT_KEY['LOAD_LIST'], self.do_somth))
         media_menu.append(self.create_menu_item(
@@ -281,11 +281,9 @@ class Playlist(gtk.VBox):
         playlist.append_column(column)
 
         box = gtk.HBox(False, 5)
-
         scrolled = gtk.ScrolledWindow()
         scrolled.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
         scrolled.add(playlist)
-
         box.pack_start(scrolled, True, True)
         playlist.playlist_box = box
 
@@ -360,6 +358,20 @@ class Playlist(gtk.VBox):
                           f['mime'],
                           COLORS['normal'],
                           ])
+    def remove_selected_media(self, *args):
+        model, it = self.playlist.get_selection().get_selected()
+        if it:
+            model.remove(it)
+            if not model.iter_is_valid(it):
+                if len(model) == 0:
+                    it = None
+                else:
+                    #select last item
+                    it = model.get_iter((len(model)-1,))
+            if it:
+                tree_path = model.get_path(it)
+                self.playlist.set_cursor(tree_path)
+                self.playlist.scroll_to_cell(tree_path)
 
     def enter_search_mode(self, *args):
         model_filter = self.playlist.get_model().filter_new()
