@@ -306,12 +306,9 @@ class Playlist(gtk.VBox):
 
     def _create_playlist(self):
         playlist = gtk.TreeView()
-        playlist.set_reorderable(True)
+        #playlist.set_reorderable(True)
         playlist.set_enable_search(False)
         playlist.set_size_request(400, 300)
-        column = gtk.TreeViewColumn("type", gtk.CellRendererText(), text=2)
-        column.set_sort_column_id(0)
-        playlist.append_column(column)
         cell_renderer = gtk.CellRendererText()
         cell_renderer.set_property('foreground-set', True)
         column = gtk.TreeViewColumn("name", cell_renderer, text=0, foreground=3)
