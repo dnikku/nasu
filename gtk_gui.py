@@ -1,11 +1,11 @@
 from functools import partial
-import json
+
 
 # check: http://stackoverflow.com/questions/249283/virtualenv-on-ubuntu-with-no-site-packages
 import gtk, gobject
 from gtk_vlcplayer import VLCWidget
 
-from media_files import dir_files
+from media_files import dir_files, load_playlist, save_playlist
 from settings import COLORS, JUMP, AUDIO_VOLUME, SHORT_KEY
 
 
@@ -490,10 +490,10 @@ class Playlist(gtk.VBox):
                 'path': model.get_value(it, 1),
                 'mime': model.get_value(it, 2),
                 } for it in _model_iter(model)]
-        json.dump(files, fp, indent=True)
+        save_playlist(fp, files)
 
     def load_from(self, fp):
-        files = json.load(fp)
+        files = load_playlist(fp)
         self.playlist.get_model().clear()
         self.add_media_files(files)
 

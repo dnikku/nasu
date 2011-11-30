@@ -1,15 +1,8 @@
 import sys
 from os import walk, path
 import mimetypes
+import json
 
-
-def get_root_paths():
-    if sys.platform.startswith('linux'):
-        return ['..'];
-    return [
-        'E:\downloads\utorrent\completed',
-        'E:\\mmedia\\audio\\germana',
-        ]
 
 ignore_files = [
     '.txt',
@@ -20,7 +13,7 @@ ignore_files = [
     '.db', '.torrent',
     ]
 
-def dir_files(roots=get_root_paths()):
+def dir_files(roots):
     for start_from in roots:
         print start_from
         for root, dirs, files in walk(start_from):
@@ -43,3 +36,11 @@ def dir_files(roots=get_root_paths()):
                                'path': file_path,
                                'mime': path.splitext(name)[1],
                                }
+
+
+def save_playlist(fp, files):
+    json.dump(files, fp, indent=True)
+
+
+def load_playlist(fp):
+    return json.load(fp)
