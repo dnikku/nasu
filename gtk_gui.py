@@ -302,7 +302,6 @@ class Playlist(gtk.VBox):
 
         self.searchlist = self._create_searchlist()
         self.searchlist.connect("row-activated", self.searchlist_selected)
-        self.pack_start(self.playlist, True, True)
 
     def _create_playlist(self):
         playlist = gtk.TreeView()
