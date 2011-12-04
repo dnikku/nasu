@@ -40,8 +40,10 @@ class MainForm(object):
             self.m = mainfrm
 
         def enter(self):
+            self.m.player.unfullscreen()
             self.m.master.remove_accel_group(self.m.accelgroup)
             self.m.playlist.enter_search_mode()
+            self.m.master.present()
 
         def leave(self):
             self.m.master.add_accel_group(self.m.accelgroup)
