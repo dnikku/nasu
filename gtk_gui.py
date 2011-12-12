@@ -6,7 +6,7 @@ import gtk, gobject
 from gtk_vlcplayer import VLCWidget
 
 from media_files import dir_files, load_playlist, save_playlist
-from settings import COLORS, JUMP, AUDIO_VOLUME, SHORT_KEY
+from settings import COLORS, JUMP, AUDIO_VOLUME, SHORT_KEY, AUDIO_VISUALIZATION
 
 
 def _model_iter(model):
@@ -21,8 +21,7 @@ class MainForm(object):
         def enter(self): pass
         def leave(self): pass
 
-        def toggle_fullscreen(self):
-            print type(self), ': invalid call'
+        def toggle_fullscreen(self): pass
 
     class PlaylistMode(Mode):
         def __init__(self, mainfrm):
@@ -32,8 +31,19 @@ class MainForm(object):
             self.m.playlist.enter_list_mode()
 
         def toggle_fullscreen(self):
-            self.m.switch_mode(self.m.fullscreen_mode)
+            self.m.switch_mode(self.m.play_fullscreen_mode)
             self.m.playlist.enter_list_mode()
+
+    class PlayFullscreenMode(Mode):
+        def __init__(self, mainfrm):
+            self.m = mainfrm
+
+        def enter(self):
+            self.m.player.fullscreen()
+
+        def toggle_fullscreen(self):
+            self.m.player.unfullscreen()
+            self.m.switch_mode(self.m.playlist_mode)
 
     class SearchlistMode(Mode):
         def __init__(self, mainfrm):
@@ -51,16 +61,6 @@ class MainForm(object):
         def toggle_fullscreen(self):
             print "SearchListMode: invalid"
 
-    class FullscreenMode(Mode):
-        def __init__(self, mainfrm):
-            self.m = mainfrm
-
-        def enter(self):
-            self.m.player.fullscreen()
-
-        def toggle_fullscreen(self):
-            self.m.player.unfullscreen()
-            self.m.switch_mode(self.m.playlist_mode)
 
 
     def __init__(self):
@@ -116,8 +116,8 @@ class MainForm(object):
         self.master.show_all()
 
         self.playlist_mode = self.PlaylistMode(self)
+        self.play_fullscreen_mode = self.PlayFullscreenMode(self)
         self.searchlist_mode = self.SearchlistMode(self)
-        self.fullscreen_mode = self.FullscreenMode(self)
         self.current_mode = self.Mode()
         self.switch_mode(self.playlist_mode)
 
@@ -197,7 +197,25 @@ class MainForm(object):
                 partial(self.player.set_volume, AUDIO_VOLUME['DECREASE'])))
         audio_menu.append(self.create_menu_item(SHORT_KEY['AUDIO_MUTE'],
                                                 self.player.toggle_mute))
-
+        audiovisual_action = gtk.Action('Visualisation', 'Visualisation', None, None)
+        actiongroup.add_action(audiovisual_action)
+        audiovisual_menuitem = audiovisual_action.create_menu_item()
+        audio_menu.append(audiovisual_menuitem)
+        audiovisual_menu = gtk.Menu()
+        audiovisual_menuitem.set_submenu(audiovisual_menu)
+        radio_group = None
+        for x, i in zip(AUDIO_VISUALIZATION, range(0, len(AUDIO_VISUALIZATION))):
+            ra = gtk.RadioAction(x, x, None, None, i)
+            radio_group = radio_group or ra
+            if radio_group != ra:
+                ra.set_group(radio_group)
+            ra.connect('activate',
+                       lambda action:
+                           self.player.set_audio_visualization(action.get_name()))
+            self.actiongroup.add_action(ra)
+            ra_menuitem = ra.create_menu_item()
+            audiovisual_menu.append(ra_menuitem)
+        radio_group.activate()
         return menubar
 
     def create_menu_item(self, name_accelerator, callback):

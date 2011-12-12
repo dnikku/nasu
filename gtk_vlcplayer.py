@@ -67,17 +67,38 @@ class WindowsVLCWidget(Windowed):
     def __init__(self):
         super(WindowsVLCWidget, self).__init__()
 
-        self._player = self.vlc_instance.media_player_new()
-        self._player.set_hwnd(self.w.window.handle)
+        self._player = None
+        self._audio_visual = None
 
         self.set_size_request(320, 200)
         gobject.timeout_add(1000, self._play_status)
 
     def play(self, file_path):
-        self._player.set_media(self.vlc_instance.media_new(
-                file_path,
-                'sub-filter=marq', #'vout=caca'
-                ))
+        volume = 50
+        mute = False
+        if self._player:
+            self._player.stop()
+            volume = self._player.audio_get_volume()
+            mute = self._player.audio_get_mute()
+
+        # create new instance cause i don't know how to reset audio filters
+        self._player = self.vlc_instance.media_player_new()
+        self._player.set_hwnd(self.w.window.handle)
+        self._player.audio_set_volume(volume)
+        self._player.audio_set_mute(mute)
+
+        if self._audio_visual and self.is_audio_only(file_path):
+            print 'audio_visual:', self._audio_visual
+            self._player.set_media(self.vlc_instance.media_new(
+                    file_path,
+                    'sub-filter=marq', #'vout=caca'
+                    'audio-visual=' + self._audio_visual
+                    ))
+        else:
+             self._player.set_media(self.vlc_instance.media_new(
+                     file_path,
+                     'sub-filter=marq', #'vout=caca'
+                     ))
 
         self._player.play()
         _, file_name = os.path.split(file_path)
@@ -138,6 +159,18 @@ class WindowsVLCWidget(Windowed):
             volume = self._player.audio_get_volume()
             self.set_text('VOLUME: %s' % volume, position=5, timeout=2000)
 
+    def set_audio_visualization(self, visualization):
+        if visualization == 'none':
+            visualization = None
+        self._audio_visual = visualization
+        print 'set_audio_visual:', self._audio_visual
+
+    def is_audio_only(self, file_path):
+        _, ext = os.path.splitext(file_path)
+        r = ext.lower() == '.mp3'
+        print 'is audio:', r
+        return r
+
     def get_length(self):
         """ total play duration, in seconds """
         return int(self._player.get_length()/1000)
@@ -147,9 +180,8 @@ class WindowsVLCWidget(Windowed):
         return int(self._player.get_time()/1000)
 
     def _play_status(self, *args):
-        #print ('play_status: pos=%s/%s, st=%s'
-        #       % (self.get_time(), self.get_length(), self._player.get_state()))
-        if self._player.get_state() == vlc.State.Ended:
+        state = self._player.get_state() if self._player else None
+        if state == vlc.State.Ended:
             self.emit('play-ended')
         return True # enble repetation
 

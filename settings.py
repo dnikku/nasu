@@ -17,6 +17,15 @@ AUDIO_VOLUME = {
     'DECREASE': -10
 }
 
+AUDIO_VISUALIZATION = [
+    'goom',
+    'none',
+    'spectrometer',
+    'scope',
+    'spectrum analyzer',
+    'vu meter',
+    'projectm'
+    ]
 
 SHORT_KEY = {
     # stucture: key: (Label, short-key)
